@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class FormSubmission extends Model
 {
-    //
+    protected $guarded=[];
 }
