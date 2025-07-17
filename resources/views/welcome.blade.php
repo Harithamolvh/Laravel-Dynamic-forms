@@ -121,10 +121,10 @@
             </div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">No Forms Found</h3>
             <p class="text-gray-500 mb-6">You haven't created any forms yet. Get started by creating your first form!</p>
-            <a href="{{ route('forms.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md font-medium transition-colors duration-200">
+            <!-- <a href="{{ route('forms.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md font-medium transition-colors duration-200">
                 <i class="fas fa-plus mr-2"></i>
                 Create Your First Form
-            </a>
+            </a> -->
         </div>
         @endif
     </main>

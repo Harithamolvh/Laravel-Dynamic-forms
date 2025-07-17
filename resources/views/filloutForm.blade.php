@@ -76,14 +76,17 @@
                     </div>
                 @endif
 
-                <form action="{{ route('forms.submit', $form->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form action="{{ route('forms.submit',['id'=> $form->id]) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                   
                     @foreach($form->fields->sortBy('order') as $field)
+                    @php
+                        \Illuminate\Support\Facades\Log::info($form);
+                    @endphp
                         <div class="form-group">
                             <label for="{{ $field->name }}" class="block text-sm font-medium text-gray-700 mb-2">
                                 {{ $field->label }}
-                                @if($field->rules && (in_array('required', $field->rules) || collect($field->rules)->contains(function($rule) { return str_contains($rule, 'required'); })))
+                                @if(!empty($field->rules['required']))
                                     <span class="text-red-500">*</span>
                                 @endif
                             </label>
@@ -136,25 +139,32 @@
                                     @break
 
                                 @case('select')
-                                    <select id="{{ $field->name }}" 
-                                            name="{{ $field->name }}" 
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error($field->name) border-red-500 @enderror">
-                                        <option value="">Select an option</option>
-                                        @if($field->options && is_array($field->options))
-                                            @foreach($field->options as $option)
-                                                <option value="{{ $option }}" {{ old($field->name) == $option ? 'selected' : '' }}>
-                                                    {{ $option }}
-                                                </option>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                    @break
+                                <select id="{{ $field->name }}"
+                                        name="{{ $field->name }}"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error($field->name) border-red-500 @enderror">
+                                    <option value="">Select an option</option>
+                                    @php
+                                        $decodedOptions = json_decode($field->options, true);
+                                    @endphp
+
+                                    @if($decodedOptions && is_array($decodedOptions))
+                                        @foreach($decodedOptions as $option)
+                                            <option value="{{ $option['value'] }}" {{ old($field->name) == $option['value'] ? 'selected' : '' }}>
+                                                {{ $option['label'] }}
+                                            </option>
+                                        @endforeach
+                                    @endif
+                                </select>
+                                @break
 
                                 @case('radio')
                                 <div>
                                     <div class="mt-1 space-y-2">
-                                        @if($field->options && is_array($field->options)) 
-                                            @foreach($field->options as $option)
+                                        @php
+                                           $decodedOptions = json_decode($field->options, true);
+                                        @endphp
+                                        @if($decodedOptions && is_array($decodedOptions)) 
+                                            @foreach($decodedOptions as $option)
                                                 <label class="flex items-center">
                                                     <input type="radio"
                                                         name="{{ $field->name }}"
@@ -176,15 +186,18 @@
 
                                 @case('checkbox')
                                     <div class="space-y-2">
-                                        @if($field->options && is_array($field->options))
-                                            @foreach($field->options as $option)
+                                        @php
+                                           $decodedOptions = json_decode($field->options, true);
+                                        @endphp
+                                        @if($decodedOptions && is_array($decodedOptions))
+                                            @foreach($decodedOptions as $option)
                                                 <label class="flex items-center">
                                                     <input type="checkbox" 
                                                            name="{{ $field->name }}[]" 
-                                                           value="{{ $option }}" 
+                                                           value="{{ $option['value'] }}" 
                                                            {{ in_array($option, old($field->name, [])) ? 'checked' : '' }}
                                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                                    <span class="ml-2 text-sm text-gray-700">{{ $option }}</span>
+                                                    <span class="ml-2 text-sm text-gray-700">{{ $option['label'] }}</span>
                                                 </label>
                                             @endforeach
                                         @endif

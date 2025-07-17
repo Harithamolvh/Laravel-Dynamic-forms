@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendFormCreatedNotification;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\FormFields;
@@ -43,7 +44,7 @@ class FormController extends Controller
             'fields.*.order' => 'required|integer|min:0',
         ]);
 
-        DB::transaction(function () use ($request) {
+        $form = DB::transaction(function () use ($request) {
             // Create the form
             $form = Form::create([
                 'name' => $request->name,
@@ -63,7 +64,11 @@ class FormController extends Controller
                     'order' => $fieldData['order'],
                 ]);
             }
+
+            return $form;
         });
+
+       SendFormCreatedNotification::dispatch($form);
 
         return response()->json([
             'success' => true,
