@@ -90,7 +90,10 @@ class FormController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $form = Form::with(['fields' => function($query) {
+            $query->orderBy('order');
+        }])->findOrFail($id);       
+        return view('forms.edit', compact('form'));
     }
 
     /**
@@ -98,14 +101,74 @@ class FormController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:forms,slug,' . $id,
+            'description' => 'nullable|string',
+            'fields' => 'required|array|min:1',
+            'fields.*.id' => 'nullable|integer|exists:form_fields,id',
+            'fields.*.label' => 'required|string|max:255',
+            'fields.*.name' => 'required|string|max:255',
+            'fields.*.type' => 'required|string|in:text,email,number,password,textarea,select,radio,checkbox,date,file',
+            'fields.*.order' => 'required|integer|min:0',
+            'fields.*.options' => 'nullable|array',
+            'fields.*.rules' => 'nullable|array',
+        ]);
+
+        $form = Form::findOrFail($id);
+
+        DB::transaction(function () use ($request, $form) {
+            // Update the form
+            $form->update([
+                'name' => $request->name,
+                'slug' => $request->slug,
+                'description' => $request->description,
+            ]);
+
+            // Get existing field IDs
+            $existingFieldIds = $form->fields()->pluck('id')->toArray();
+            $submittedFieldIds = collect($request->fields)
+                ->pluck('id')
+                ->filter()
+                ->toArray();
+
+            // Delete fields that are no longer present
+            $fieldsToDelete = array_diff($existingFieldIds, $submittedFieldIds);
+            if (!empty($fieldsToDelete)) {
+                FormField::whereIn('id', $fieldsToDelete)->delete();
+            }
+
+            // Create or update fields
+            foreach ($request->fields as $fieldData) {
+                $fieldAttributes = [
+                    'form_id' => $form->id,
+                    'label' => $fieldData['label'],
+                    'name' => $fieldData['name'],
+                    'type' => $fieldData['type'],
+                    'options' => isset($fieldData['options']) ? json_encode($fieldData['options']) : null,
+                    'rules' => isset($fieldData['rules']) ? json_encode($fieldData['rules']) : null,
+                    'order' => $fieldData['order'],
+                ];
+
+                if (isset($fieldData['id']) && $fieldData['id']) {
+                    // Update existing field
+                    FormField::where('id', $fieldData['id'])->update($fieldAttributes);
+                } else {
+                    // Create new field
+                    FormField::create($fieldAttributes);
+                }
+            }
+        });
+
+        return redirect()->route('forms.index')->with("success","Form updated successfully!");
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Form $form)
     {
-        
+        $form->delete();
+        return redirect()->back();
     }
 }
